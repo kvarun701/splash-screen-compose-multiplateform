@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Modern AndroidX Splash Screen Theme -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Set the splash screen background to warm cream -->
+        <item name="windowSplashScreenBackground">#F4EAE1</item>
+        
+        <!-- Use our custom vector mountain/sun icon -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        
+        <!-- After splash finishes, transition back to the default application theme -->
+        <item name="postSplashScreenTheme">@android:style/Theme.Material.Light.NoActionBar</item>
+    </style>
+</resources>

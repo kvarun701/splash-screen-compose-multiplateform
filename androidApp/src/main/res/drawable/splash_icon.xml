@@ -1,0 +1,28 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- Sky Background (Optional, but let's keep it transparent for system splash layout, or add a subtle soft glow) -->
+    
+    <!-- Sun (Warm Golden Orange) -->
+    <path
+        android:fillColor="#E78F66"
+        android:pathData="M50,45 C58.28,45 65,38.28 65,30 C65,21.72 58.28,15 50,15 C41.72,15 35,21.72 35,30 C35,38.28 41.72,45 50,45 Z" />
+
+    <!-- Back Mountain (Sand/Beige) -->
+    <path
+        android:fillColor="#D9A07D"
+        android:pathData="M15,85 L48,42 L80,85 Z" />
+
+    <!-- Front Mountain (Terracotta) -->
+    <path
+        android:fillColor="#C26D5C"
+        android:pathData="M35,85 L68,48 L100,85 Z" />
+
+    <!-- Foreshore/Base Line (Darker Sage/Earth Brown) -->
+    <path
+        android:fillColor="#5A4D41"
+        android:pathData="M0,83 L100,83 L100,87 L0,87 Z" />
+</vector>
