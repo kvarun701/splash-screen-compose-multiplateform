@@ -12,6 +12,182 @@ This is a Kotlin Multiplatform project targeting Android, iOS.
     Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
     folder is the appropriate location.
 
+---
+
+## Kotlin Multiplatform: `expect` and `actual` Keywords
+
+In a Kotlin Multiplatform (KMP) project like this one, we write shared business logic in `commonMain`, but we frequently need to access platform-specific APIs (such as iOS `UIKit` or Android SDK tools). Kotlin provides the `expect` and `actual` keywords as the primary mechanism to accomplish this.
+
+### 1. What are `expect` and `actual`?
+
+*   **`expect` (declared in `commonMain`):**
+    You use the `expect` keyword to define a contract. It tells the Kotlin compiler: *"Here is a function, class, interface, or property that the common code needs, but the platform-specific directories will provide the actual implementation."*
+*   **`actual` (implemented in platform-specific modules like `androidMain`, `iosMain`):**
+    For every `expect` declaration in `commonMain`, each platform module must provide a matching implementation marked with the `actual` keyword. If a platform is missing its `actual` implementation, or if the signatures do not match exactly, the compiler will raise a compilation error.
+
+### 2. Why do we use them?
+
+*   **Platform-Specific APIs:** Common Kotlin code compiles to a subset of Kotlin that doesn't have access to platform-specific SDKs. For example, common code cannot call Android's `android.os.Build` or iOS's `platform.UIKit.UIDevice` directly. Using `expect` / `actual` bridges this gap.
+*   **Maximizing Code Shareability:** You can write the majority of your application's logic (view models, business logic, networking, etc.) in `commonMain`, and abstract away only the platform-specific behaviors.
+*   **Compile-Time Safety:** Unlike using reflection or dependency injection frameworks where mismatches are only caught at runtime, KMP's compiler strictly validates that every target platform implements the exact contract defined by the `expect` keyword.
+
+### 3. Common Use Cases
+
+*   **System and Device Information:** Getting OS versions, device names, screen sizes, or platform name (as implemented in this project).
+*   **File System Access:** Accessing native application directories (e.g., Android's cache directories vs. iOS's `NSDocumentDirectory`).
+*   **Secure Storage:** Interacting with native secure storage (e.g., Android's `KeyStore` vs. iOS's `Keychain`).
+*   **Local Databases & Shared Preferences:** Initializing databases like SQLDelight or accessing local settings (`SharedPreferences` vs. `NSUserDefaults`).
+*   **Utilities & Logging:** Generating UUIDs, formatting dates, or invoking platform logging (e.g., `Log.d` on Android vs. `NSLog` on iOS).
+
+### 4. How it is used in this project
+
+This project uses `expect` and `actual` to determine the current platform name and version.
+
+#### Step A: Declare the `expect` function in `commonMain`
+In [Platform.kt](file:///Users/varun/AndroidStudioProjects/splashscreen/shared/src/commonMain/kotlin/com/ganesh/splashscreen/Platform.kt):
+```kotlin
+package com.ganesh.splashscreen
+
+interface Platform {
+    val name: String
+}
+
+// Expect fun declaration
+expect fun getPlatform(): Platform
+```
+
+#### Step B: Implement the `actual` function for Android
+In [Platform.android.kt](file:///Users/varun/AndroidStudioProjects/splashscreen/shared/src/androidMain/kotlin/com/ganesh/splashscreen/Platform.android.kt):
+```kotlin
+package com.ganesh.splashscreen
+
+import android.os.Build
+
+class AndroidPlatform : Platform {
+    override val name: String = "Android ${Build.VERSION.SDK_INT}"
+}
+
+// Actual Android implementation
+actual fun getPlatform(): Platform = AndroidPlatform()
+```
+
+#### Step C: Implement the `actual` function for iOS
+In [Platform.ios.kt](file:///Users/varun/AndroidStudioProjects/splashscreen/shared/src/iosMain/kotlin/com/ganesh/splashscreen/Platform.ios.kt):
+```kotlin
+package com.ganesh.splashscreen
+
+import platform.UIKit.UIDevice
+
+class IOSPlatform: Platform {
+    override val name: String = UIDevice.currentDevice.systemName() + " " + UIDevice.currentDevice.systemVersion
+}
+
+// Actual iOS implementation
+actual fun getPlatform(): Platform = IOSPlatform()
+```
+
+---
+
+## Navigation 3 in Jetpack Compose & Compose Multiplatform
+
+Navigation 3 represents a complete redesign of navigation for Jetpack Compose and Compose Multiplatform. It shifts away from the traditional, black-box `NavController` system to a fully declarative, state-driven architecture.
+
+### What is New & Key Concepts
+
+#### 1. User-Owned Back Stack
+In previous versions of Jetpack Navigation, the library managed the back stack internally behind the scenes. In Navigation 3, the back stack is a standard `SnapshotStateList<T>` (or any Compose state of a list) that you create, observe, and mutate.
+
+*   To navigate forward: `backStack.add(Screen)`
+*   To navigate back: `backStack.removeLast()`
+*   To clear the stack: `backStack.clear()`
+
+> [!NOTE]
+> **What is `SnapshotStateList`?**
+> In Jetpack Compose, a standard Kotlin list (such as `mutableListOf()`) does not trigger recomposition when its items are added, removed, or updated. 
+> To solve this, Compose provides `SnapshotStateList` (created using `mutableStateListOf()`). It implements the `MutableList` interface but is connected directly to Compose's Snapshot State tracking system. Any changes to the list are automatically tracked, triggering recompositions in any composable (such as `NavDisplay`) that reads from it.
+
+#### 2. Declarative `NavDisplay` and `NavEntry`
+Instead of configuring a navigation graph, you use a `NavDisplay` composable. You pass it your back stack and an `entryProvider` lambda. The `entryProvider` receives the current screen key and returns a `NavEntry` containing the screen's composable content.
+
+#### 3. Built for Compose Multiplatform
+Navigation 3 is designed from the ground up to be multiplatform-first. Because it avoids reflection-based serialization, it runs smoothly on Android, iOS, Desktop (JVM), and Web (Kotlin/Wasm). All your navigation logic can live directly in `commonMain`.
+
+#### 4. Native Adaptive Layout Support
+Because navigation state is represented as a plain list, it is easy to build adaptive layouts (like list-detail split views). Instead of trying to coordinate multiple nav controllers, you can conditionally display one or multiple items from your back stack state side-by-side depending on screen size.
+
+### Minimal Code Example
+
+Here is how Navigation 3 is structured in Compose Multiplatform `commonMain`:
+
+```kotlin
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
+import androidx.navigation3.NavDisplay
+import androidx.navigation3.NavEntry
+
+// 1. Define your screens/destinations using a type-safe interface or sealed class
+sealed interface Screen {
+    data object Home : Screen
+    data class Details(val itemId: String) : Screen
+}
+
+@Composable
+fun App() {
+    // 2. You own and manage the back stack state as a list
+    val backStack = remember { mutableStateListOf<Screen>(Screen.Home) }
+
+    // 3. Define how screen keys map to their UI contents
+    val entryProvider: (Screen) -> NavEntry<out Screen> = { screen ->
+        NavEntry(key = screen) {
+            when (screen) {
+                is Screen.Home -> HomeScreen(
+                    onNavigateToDetails = { id -> backStack.add(Screen.Details(id)) }
+                )
+                is Screen.Details -> DetailsScreen(
+                    itemId = screen.itemId,
+                    onBack = { if (backStack.size > 1) backStack.removeLast() }
+                )
+            }
+        }
+    }
+
+    // 4. Render the current top screen
+    NavDisplay(
+        backStack = backStack,
+        entryProvider = entryProvider
+    )
+}
+```
+
+### How This Code Works (Step-by-Step)
+
+*   **`NavDisplay(...)`**: The core UI component in Navigation 3. It acts as the container that observes your navigation state and handles swapping screens and animations automatically.
+*   **`backStack`**: The user-owned list of routes (`SnapshotStateList<Screen>`). Since Compose tracks changes to this list, mutating it (e.g., adding or removing screens) prompts `NavDisplay` to swap to the correct active screen.
+*   **`entryProvider`**: A routing lambda function that receives the current screen key from the backstack and returns a `NavEntry`.
+*   **`NavEntry(key = screen) { _ -> ... }`**: A container class that associates a route key with its actual Composable UI. The `_` represents the unused context parameter in the trailing Composable lambda block.
+*   **`when (screen)` Router**: A type-safe conditional block mapping each route key directly to its Composable screen function (`SplashScreen`, `LoginScreen`, or `HomeScreen`).
+*   **Navigation Actions**: Screen event callbacks (like `onSplashFinished` or `onLoginSuccess`) mutate the `backStack` list (e.g., `backStack.clear()` followed by `backStack.add(...)`), which instantly changes the active screen.
+
+### Why Use a `sealed` Interface for Navigation?
+
+Using a `sealed interface` (or `sealed class`) to model your screens provides several critical advantages:
+
+*   **Exhaustive `when` Expressions (Compile-Time Safety)**: Since the compiler knows all possible subclasses of the `sealed` interface, you do not need an `else ->` block when switching between screens. If you add a new screen in the future (e.g., `data object Profile : Screen`), the compiler will instantly fail to build and flag your routing blocks until you explicitly handle the new screen.
+*   **Restricted Hierarchy**: Implementations of a `sealed interface` can only be defined within the same package, preventing external or arbitrary classes from being passed into your backstack.
+*   **Dynamic Screen Arguments**: Unlike standard Kotlin Enums, subclasses of a `sealed interface` can be `data class`es. This allows you to pass type-safe arguments (e.g., `data class Details(val itemId: String)`) directly between screens without having to parse strings or manage route arguments manually.
+
+### Summary of Differences
+
+| Feature | Navigation 2.x (Traditional) | Navigation 3 (New) |
+| :--- | :--- | :--- |
+| **Back Stack Owner** | Managed internally by `NavController` | Owned by you (`SnapshotStateList<T>`) |
+| **Type Safety** | Safe Args / Serialization setup | Native type-safe Kotlin classes or objects |
+| **UI Integration** | Imperative `navController.navigate()` | Declarative updates to the list state |
+| **Multiplatform** | Primarily Android-focused with wrapper support | Multiplatform-first (Kotlin/Native & Kotlin/Wasm compatible) |
+
+---
+
 ### Running the apps
 
 Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:

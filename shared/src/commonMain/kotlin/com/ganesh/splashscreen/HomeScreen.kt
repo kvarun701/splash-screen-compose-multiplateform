@@ -24,75 +24,81 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalInspectionMode // 1. Added import for Preview mode check
 import splashscreen.shared.generated.resources.Res
 import splashscreen.shared.generated.resources.landscape_bg
 
+
 @Composable
+@Preview(showBackground = true)
 fun HomeScreen() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(WarmCream)
-    ) {
-        LazyColumn(
+    TerraTheme {
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .safeContentPadding()
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .background(WarmCream)
         ) {
-            // 1. Header Section
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                HeaderSection()
-            }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .safeContentPadding()
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                // 1. Header Section
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HeaderSection()
+                }
 
-            // 2. Hero Card Section
-            item {
-                HeroCard()
-            }
+                // 2. Hero Card Section
+                item {
+                    HeroCard()
+                }
 
-            // 3. Section Title
-            item {
-                Text(
-                    text = "Popular Adventures",
-                    color = DarkSageBrown,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Serif
-                )
-            }
+                // 3. Section Title
+                item {
+                    Text(
+                        text = "Popular Adventures",
+                        color = DarkSageBrown,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Serif
+                    )
+                }
 
-            // 4. Interactive Trail Grid/List
-            item {
-                TrailItem(
-                    title = "Silent Pine Path",
-                    duration = "2.5 Hours",
-                    difficulty = "Easy",
-                    initialLikes = 42,
-                    accentColor = DarkSageGreen
-                )
-            }
+                // 4. Interactive Trail Grid/List
+                item {
+                    TrailItem(
+                        title = "Silent Pine Path",
+                        duration = "2.5 Hours",
+                        difficulty = "Easy",
+                        initialLikes = 42,
+                        accentColor = DarkSageGreen
+                    )
+                }
 
-            item {
-                TrailItem(
-                    title = "Terracotta Peaks",
-                    duration = "4.0 Hours",
-                    difficulty = "Moderate",
-                    initialLikes = 128,
-                    accentColor = Terracotta
-                )
-            }
+                item {
+                    TrailItem(
+                        title = "Terracotta Peaks",
+                        duration = "4.0 Hours",
+                        difficulty = "Moderate",
+                        initialLikes = 128,
+                        accentColor = Terracotta
+                    )
+                }
 
-            item {
-                TrailItem(
-                    title = "Golden River Valley",
-                    duration = "1.5 Hours",
-                    difficulty = "Easy",
-                    initialLikes = 95,
-                    accentColor = SunOrange
-                )
-                Spacer(modifier = Modifier.height(24.dp))
+                item {
+                    TrailItem(
+                        title = "Golden River Valley",
+                        duration = "1.5 Hours",
+                        difficulty = "Easy",
+                        initialLikes = 95,
+                        accentColor = SunOrange
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
             }
         }
     }
@@ -120,7 +126,7 @@ fun HeaderSection() {
                 fontFamily = FontFamily.Serif
             )
         }
-        
+
         // Custom Avatar representing a sun/mountain
         Box(
             modifier = Modifier
@@ -153,21 +159,31 @@ fun HeroCard() {
                     .height(160.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // Use the shared landscape image direct
-                Image(
-                    painter = painterResource(Res.drawable.landscape_bg),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-                
+                // 2. Wrap image loading with inspection mode check
+                if (LocalInspectionMode.current) {
+                    // Safe placeholder background during Preview mode to avoid crash
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(DarkSageGreen)
+                    )
+                } else {
+                    // Loads standard image at runtime on device
+                    Image(
+                        painter = painterResource(Res.drawable.landscape_bg),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
                 // Semi-transparent overlay to keep text readable
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Color.Black.copy(alpha = 0.2f))
                 )
-                
+
                 Text(
                     text = "Weekly Inspiration",
                     color = Color.White,
@@ -178,18 +194,18 @@ fun HeroCard() {
                         .padding(16.dp)
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Text(
                 text = "Discover the sand mountains & canyon pathways this weekend. Experience the golden sunset walk.",
                 color = DarkSageBrown.copy(alpha = 0.8f),
                 fontSize = 14.sp,
                 lineHeight = 20.sp
             )
-            
+
             Spacer(modifier = Modifier.height(20.dp))
-            
+
             Button(
                 onClick = {},
                 colors = ButtonDefaults.buttonColors(containerColor = Terracotta),
@@ -211,7 +227,7 @@ fun TrailItem(
 ) {
     var isLiked by remember { mutableStateOf(false) }
     var likesCount by remember { mutableStateOf(initialLikes) }
-    
+
     // Scale animation when heart is clicked
     var buttonPressed by remember { mutableStateOf(false) }
     val heartScale by animateFloatAsState(
@@ -245,9 +261,9 @@ fun TrailItem(
                         .clip(CircleShape)
                         .background(accentColor)
                 )
-                
+
                 Spacer(modifier = Modifier.width(16.dp))
-                
+
                 Column {
                     Text(
                         text = title,
@@ -263,7 +279,7 @@ fun TrailItem(
                     )
                 }
             }
-            
+
             // Interactive Animated Like Button (Hearts drawn using vector Canvas)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -283,7 +299,7 @@ fun TrailItem(
                 ) {
                     val w = size.width
                     val h = size.height
-                    
+
                     // Draw a custom heart path
                     val heartPath = Path().apply {
                         moveTo(w * 0.5f, h * 0.25f)
@@ -297,9 +313,9 @@ fun TrailItem(
                         color = if (isLiked) Terracotta else DarkSageBrown.copy(alpha = 0.4f)
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.width(8.dp))
-                
+
                 Text(
                     text = likesCount.toString(),
                     color = DarkSageBrown,

@@ -1,37 +1,51 @@
 package com.ganesh.splashscreen
 
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.ui.NavDisplay
 
-enum class ScreenState {
-    Splash,
-    Home
+sealed interface Screen {
+    data object Splash : Screen
+    data object Login : Screen
+    data object Home : Screen
 }
 
 @Composable
 @Preview
 fun App() {
     TerraTheme {
-        var currentScreen by remember { mutableStateOf(ScreenState.Splash) }
+        val backStack = remember { mutableStateListOf<Screen>(Screen.Splash) }
 
-        Crossfade(
-            targetState = currentScreen,
-            animationSpec = tween(durationMillis = 800)
-        ) { screen ->
-            when (screen) {
-                ScreenState.Splash -> {
-                    SplashScreen(
-                        onSplashFinished = {
-                            currentScreen = ScreenState.Home
+        NavDisplay(
+            backStack = backStack,
+            entryProvider = { screen: Screen ->
+                NavEntry(key = screen) { _ ->
+                    when (screen) {
+                        Screen.Splash -> {
+                            SplashScreen(
+                                onSplashFinished = {
+                                    backStack.clear()
+                                    backStack.add(Screen.Login)
+                                }
+                            )
                         }
-                    )
-                }
-                ScreenState.Home -> {
-                    HomeScreen()
+                        Screen.Login -> {
+                            LoginScreen(
+                                onLoginSuccess = {
+                                    backStack.clear()
+                                    backStack.add(Screen.Home)
+                                }
+                            )
+                        }
+                        Screen.Home -> {
+                            HomeScreen()
+                        }
+                    }
                 }
             }
-        }
+        )
     }
 }
