@@ -48,6 +48,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.jetbrains.navigation3.ui)
+            api("io.github.kvarun701:compose-pref:1.0.0")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

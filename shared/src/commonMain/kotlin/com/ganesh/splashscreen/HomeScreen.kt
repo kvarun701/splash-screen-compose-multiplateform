@@ -26,13 +26,17 @@ import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.platform.LocalInspectionMode // 1. Added import for Preview mode check
+import com.ganesh.composepref.KeyValueStorage
+import com.ganesh.composepref.InMemoryKeyValueStorage
 import splashscreen.shared.generated.resources.Res
 import splashscreen.shared.generated.resources.landscape_bg
 
 
 @Composable
 @Preview(showBackground = true)
-fun HomeScreen() {
+fun HomeScreen(storage: KeyValueStorage = remember { InMemoryKeyValueStorage() }) {
+    val username = remember { storage.getString("username", defaultValue = "Eco Explorer") ?: "Eco Explorer" }
+    val displayName = if (username.isBlank()) "Eco Explorer" else username
     TerraTheme {
         Box(
             modifier = Modifier
@@ -49,7 +53,7 @@ fun HomeScreen() {
                 // 1. Header Section
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    HeaderSection()
+                    HeaderSection(username = displayName)
                 }
 
                 // 2. Hero Card Section
@@ -105,7 +109,7 @@ fun HomeScreen() {
 }
 
 @Composable
-fun HeaderSection() {
+fun HeaderSection(username: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -119,7 +123,7 @@ fun HeaderSection() {
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = "Eco Explorer",
+                text = username,
                 color = DarkSageBrown,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,

@@ -6,6 +6,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import com.ganesh.composepref.KeyValueStorage
+import com.ganesh.composepref.InMemoryKeyValueStorage
 
 sealed interface Screen {
     data object Splash : Screen
@@ -15,7 +17,7 @@ sealed interface Screen {
 
 @Composable
 @Preview
-fun App() {
+fun App(storage: KeyValueStorage = remember { InMemoryKeyValueStorage() }) {
     TerraTheme {
         val backStack = remember { mutableStateListOf<Screen>(Screen.Splash) }
 
@@ -34,14 +36,15 @@ fun App() {
                         }
                         Screen.Login -> {
                             LoginScreen(
-                                onLoginSuccess = {
+                                onLoginSuccess = { username ->
+                                    storage.putString("username", username)
                                     backStack.clear()
                                     backStack.add(Screen.Home)
                                 }
                             )
                         }
                         Screen.Home -> {
-                            HomeScreen()
+                            HomeScreen(storage = storage)
                         }
                     }
                 }

@@ -188,6 +188,78 @@ Using a `sealed interface` (or `sealed class`) to model your screens provides se
 
 ---
 
+## Local Storage & Preferences with `compose-pref`
+
+This project integrates the `compose-pref` library to achieve local key-value storage and persistence across multiple target platforms (Android and iOS). It persists configuration data (like the logged-in user's name) across application launches.
+
+### 1. Library Integration and Dependency Configuration
+The `compose-pref` library is defined in the shared module's build configuration. To ensure the platform-specific modules (like `androidApp`) can resolve the storage types transitively, it is added as an `api` dependency in [shared/build.gradle.kts](file:///Users/varun/AndroidStudioProjects/splashscreen/shared/build.gradle.kts):
+
+```kotlin
+sourceSets {
+    commonMain.dependencies {
+        // Expose compose-pref transitively
+        api("io.github.kvarun701:compose-pref:1.0.0")
+    }
+}
+```
+
+### 2. Platform-Specific Initialization
+`KeyValueStorage` is initialized natively on each platform during startup and passed into the shared entry point `App(storage)`:
+
+*   **Android (in [MainActivity.kt](file:///Users/varun/AndroidStudioProjects/splashscreen/androidApp/src/main/kotlin/com/ganesh/splashscreen/MainActivity.kt)):**
+    `KeyValueStorageFactory` requires the `applicationContext` to initialize the underlying Android `SharedPreferences`:
+    ```kotlin
+    val storage = KeyValueStorageFactory(applicationContext).create("app_preferences")
+    setContent {
+        App(storage = storage)
+    }
+    ```
+
+*   **iOS (in [MainViewController.kt](file:///Users/varun/AndroidStudioProjects/splashscreen/shared/src/iosMain/kotlin/com/ganesh/splashscreen/MainViewController.kt)):**
+    On iOS, no context parameter is needed. It wraps `NSUserDefaults` under the hood:
+    ```kotlin
+    val storage = KeyValueStorageFactory().create("app_preferences")
+    App(storage = storage)
+    ```
+
+### 3. Usage & Flow Mechanics
+
+#### Step A: Collecting and Writing to Storage
+On the Login Screen ([Login.kt](file:///Users/varun/AndroidStudioProjects/splashscreen/shared/src/commonMain/kotlin/com/ganesh/splashscreen/Login.kt)), the user inputs their username. When they press **Continue**, the `onLoginSuccess(username)` callback is triggered:
+```kotlin
+Button(
+    onClick = { onLoginSuccess(username) },
+    ...
+)
+```
+
+In [App.kt](file:///Users/varun/AndroidStudioProjects/splashscreen/shared/src/commonMain/kotlin/com/ganesh/splashscreen/App.kt), the callback receives the username and stores it inside the preferences database:
+```kotlin
+Screen.Login -> {
+    LoginScreen(
+        onLoginSuccess = { username ->
+            storage.putString("username", username)
+            backStack.clear()
+            backStack.add(Screen.Home)
+        }
+    )
+}
+```
+
+#### Step B: Reading and Displaying
+On the Home Screen ([HomeScreen.kt](file:///Users/varun/AndroidStudioProjects/splashscreen/shared/src/commonMain/kotlin/com/ganesh/splashscreen/HomeScreen.kt)), the stored name is retrieved. We provide a default fallback of `"Eco Explorer"` in case the value is missing or blank:
+```kotlin
+val username = remember { storage.getString("username", defaultValue = "Eco Explorer") ?: "Eco Explorer" }
+val displayName = if (username.isBlank()) "Eco Explorer" else username
+
+HeaderSection(username = displayName)
+```
+
+This ensures that the user's name is dynamically read from local storage and displayed in the header upon succeeding through the login flow, and remains persisted even after the app is force closed and reopened.
+
+---
+
 ### Running the apps
 
 Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:

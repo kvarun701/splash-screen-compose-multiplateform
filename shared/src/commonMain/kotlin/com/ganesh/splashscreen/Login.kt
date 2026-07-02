@@ -21,9 +21,9 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: (String) -> Unit
 ) {
-    var email by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var animateStart by remember { mutableStateOf(false) }
 
@@ -93,11 +93,11 @@ fun LoginScreen(
                     )
 
                     OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email", color = WarmGrey) },
+                        value = username,
+                        onValueChange = { username = it },
+                        label = { Text("Username", color = WarmGrey) },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Terracotta,
                             unfocusedBorderColor = WarmGrey.copy(alpha = 0.5f),
@@ -126,7 +126,7 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Button(
-                        onClick = onLoginSuccess,
+                        onClick = { onLoginSuccess(username) },
                         colors = ButtonDefaults.buttonColors(containerColor = Terracotta),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
