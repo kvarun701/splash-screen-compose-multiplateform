@@ -29,8 +29,13 @@ fun App(storage: KeyValueStorage = remember { InMemoryKeyValueStorage() }) {
                         Screen.Splash -> {
                             SplashScreen(
                                 onSplashFinished = {
+                                    val savedUser = storage.getString("username", "")
                                     backStack.clear()
-                                    backStack.add(Screen.Login)
+                                    if (!savedUser.isNullOrBlank()) {
+                                        backStack.add(Screen.Home)
+                                    } else {
+                                        backStack.add(Screen.Login)
+                                    }
                                 }
                             )
                         }
@@ -44,7 +49,14 @@ fun App(storage: KeyValueStorage = remember { InMemoryKeyValueStorage() }) {
                             )
                         }
                         Screen.Home -> {
-                            HomeScreen(storage = storage)
+                            HomeScreen(
+                                storage = storage,
+                                onLogout = {
+                                    storage.clear()
+                                    backStack.clear()
+                                    backStack.add(Screen.Login)
+                                }
+                            )
                         }
                     }
                 }

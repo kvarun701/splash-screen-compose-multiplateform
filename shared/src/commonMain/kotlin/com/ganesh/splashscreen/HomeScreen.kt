@@ -18,6 +18,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -34,7 +37,10 @@ import splashscreen.shared.generated.resources.landscape_bg
 
 @Composable
 @Preview(showBackground = true)
-fun HomeScreen(storage: KeyValueStorage = remember { InMemoryKeyValueStorage() }) {
+fun HomeScreen(
+    storage: KeyValueStorage = remember { InMemoryKeyValueStorage() },
+    onLogout: () -> Unit = {}
+) {
     val username = remember { storage.getString("username", defaultValue = "Eco Explorer") ?: "Eco Explorer" }
     val displayName = if (username.isBlank()) "Eco Explorer" else username
     TerraTheme {
@@ -53,7 +59,7 @@ fun HomeScreen(storage: KeyValueStorage = remember { InMemoryKeyValueStorage() }
                 // 1. Header Section
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    HeaderSection(username = displayName)
+                    HeaderSection(username = displayName, onLogoutClick = onLogout)
                 }
 
                 // 2. Hero Card Section
@@ -109,7 +115,7 @@ fun HomeScreen(storage: KeyValueStorage = remember { InMemoryKeyValueStorage() }
 }
 
 @Composable
-fun HeaderSection(username: String) {
+fun HeaderSection(username: String, onLogoutClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -131,16 +137,71 @@ fun HeaderSection(username: String) {
             )
         }
 
-        // Custom Avatar representing a sun/mountain
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(Terracotta),
-            contentAlignment = Alignment.Center
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Canvas(modifier = Modifier.size(28.dp)) {
-                drawCircle(color = SunOrange, radius = size.width * 0.4f)
+            // Elegant Logout Icon Button
+            IconButton(
+                onClick = onLogoutClick,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(SoftBeige.copy(alpha = 0.8f))
+            ) {
+                Canvas(modifier = Modifier.size(20.dp)) {
+                    val w = size.width
+                    val h = size.height
+                    
+                    // Draw a door/bracket line on the left
+                    val bracketPath = Path().apply {
+                        moveTo(w * 0.65f, h * 0.2f)
+                        lineTo(w * 0.3f, h * 0.2f)
+                        lineTo(w * 0.3f, h * 0.8f)
+                        lineTo(w * 0.65f, h * 0.8f)
+                    }
+                    drawPath(
+                        path = bracketPath,
+                        color = Terracotta,
+                        style = Stroke(
+                            width = 2.dp.toPx(),
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round
+                        )
+                    )
+                    
+                    // Draw the arrow pointing right/out
+                    val arrowLine = Path().apply {
+                        moveTo(w * 0.45f, h * 0.5f)
+                        lineTo(w * 0.8f, h * 0.5f)
+                        // Arrow head
+                        moveTo(w * 0.65f, h * 0.35f)
+                        lineTo(w * 0.8f, h * 0.5f)
+                        lineTo(w * 0.65f, h * 0.65f)
+                    }
+                    drawPath(
+                        path = arrowLine,
+                        color = Terracotta,
+                        style = Stroke(
+                            width = 2.dp.toPx(),
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round
+                        )
+                    )
+                }
+            }
+
+            // Custom Avatar representing a sun/mountain
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(Terracotta),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.size(28.dp)) {
+                    drawCircle(color = SunOrange, radius = size.width * 0.4f)
+                }
             }
         }
     }

@@ -260,6 +260,88 @@ This ensures that the user's name is dynamically read from local storage and dis
 
 ---
 
+## Session Management & Logout Flow
+
+This project implements a state-driven session lifecycle. It handles logging in, persistence check during startup, and logging out.
+
+### 1. The Startup Session Check
+When the app launches, it starts on the splash screen. Once the splash sequence finishes, [App.kt](file:///Users/varun/AndroidStudioProjects/splashscreen/shared/src/commonMain/kotlin/com/ganesh/splashscreen/App.kt) checks whether a user session is already active:
+
+```kotlin
+onSplashFinished = {
+    val savedUser = storage.getString("username", "")
+    backStack.clear()
+    if (!savedUser.isNullOrBlank()) {
+        backStack.add(Screen.Home)
+    } else {
+        backStack.add(Screen.Login)
+    }
+}
+```
+* If a session exists (`!savedUser.isNullOrBlank()`), it redirects to `Screen.Home`.
+* Otherwise, it routes the user to the login screen `Screen.Login`.
+
+### 2. The Logout Trigger (UI Layer)
+On the Home Screen ([HomeScreen.kt](file:///Users/varun/AndroidStudioProjects/splashscreen/shared/src/commonMain/kotlin/com/ganesh/splashscreen/HomeScreen.kt)), a custom logout button is displayed in the header.
+* It is styled elegantly using a custom-drawn `Canvas` path representing a door and an arrow pointing out.
+* The click is bound to the `onLogout` callback:
+```kotlin
+IconButton(
+    onClick = onLogoutClick,
+    modifier = Modifier
+        .size(40.dp)
+        .clip(CircleShape)
+        .background(SoftBeige.copy(alpha = 0.8f))
+) {
+    Canvas(modifier = Modifier.size(20.dp)) {
+        // Custom door and exit arrow vector paths
+    }
+}
+```
+
+### 3. The Logout Logic & Navigation Reset (App Layer)
+When `onLogout` is triggered, the shared entry point [App.kt](file:///Users/varun/AndroidStudioProjects/splashscreen/shared/src/commonMain/kotlin/com/ganesh/splashscreen/App.kt) performs three operations:
+
+```kotlin
+onLogout = {
+    storage.clear()
+    backStack.clear()
+    backStack.add(Screen.Login)
+}
+```
+
+This sequence is designed to:
+1. **Clear Local Preferences (`storage.clear()`)**: Clears the key-value storage (removes the `"username"` key), effectively destroying the session. This guarantees that on subsequent cold starts, the user will be routed back to the Login screen.
+2. **Clear Navigation History (`backStack.clear()`)**: Empties the navigation back stack. This is critical for security and user experience as it prevents users from using the system back button or back gestures to navigate back to the home screen after logging out.
+3. **Redirect to Login (`backStack.add(Screen.Login)`)**: Pushes the login screen into the back stack as the new root screen.
+
+### 4. Unit Testing the Session Lifecycle
+To ensure the session lifecycle is robust, the shared module includes a unit test inside [SharedLogicAndroidHostTest.kt](file:///Users/varun/AndroidStudioProjects/splashscreen/shared/src/androidHostTest/kotlin/com/ganesh/splashscreen/SharedLogicAndroidHostTest.kt):
+
+```kotlin
+@Test
+fun testSessionStorageFlow() {
+    val storage = InMemoryKeyValueStorage()
+    
+    // 1. Initial State: No session active
+    val initialUser = storage.getString("username", "")
+    assertTrue(initialUser.isNullOrBlank())
+    
+    // 2. Login: Put username in storage
+    storage.putString("username", "testUser")
+    val savedUser = storage.getString("username", "")
+    assertEquals("testUser", savedUser)
+    
+    // 3. Logout: Clear storage and verify session is gone
+    storage.clear()
+    val clearedUser = storage.getString("username", "")
+    assertTrue(clearedUser.isNullOrBlank())
+}
+```
+This test runs in memory using `InMemoryKeyValueStorage` to verify that adding a user establishes the session and calling `.clear()` completely destroys it.
+
+---
+
 ### Running the apps
 
 Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
