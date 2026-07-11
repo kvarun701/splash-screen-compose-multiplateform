@@ -8,10 +8,12 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import com.ganesh.composepref.KeyValueStorage
 import com.ganesh.composepref.InMemoryKeyValueStorage
+import androidx.compose.ui.platform.LocalInspectionMode
 
 sealed interface Screen {
     data object Splash : Screen
     data object Login : Screen
+    data object Register : Screen
     data object Home : Screen
 }
 
@@ -20,6 +22,19 @@ sealed interface Screen {
 fun App(storage: KeyValueStorage = remember { InMemoryKeyValueStorage() }) {
     TerraTheme {
         val backStack = remember { mutableStateListOf<Screen>(Screen.Splash) }
+        val isPreview = LocalInspectionMode.current
+        val databaseHelper = remember {
+            if (isPreview) {
+                null
+            } else {
+                try {
+                    DatabaseHelper(DatabaseDriverFactory().createDriver())
+                } catch (e: Exception) {
+                    println("DatabaseHelper init failed: ${e.message}")
+                    null
+                }
+            }
+        }
 
         NavDisplay(
             backStack = backStack,
@@ -45,7 +60,24 @@ fun App(storage: KeyValueStorage = remember { InMemoryKeyValueStorage() }) {
                                     storage.putString("username", username)
                                     backStack.clear()
                                     backStack.add(Screen.Home)
-                                }
+                                },
+                                onNavigateToRegister = {
+                                    backStack.add(Screen.Register)
+                                },
+                                databaseHelper = databaseHelper
+                            )
+                        }
+                        Screen.Register -> {
+                            RegisterScreen(
+                                onRegisterSuccess = { username ->
+                                    storage.putString("username", username)
+                                    backStack.clear()
+                                    backStack.add(Screen.Home)
+                                },
+                                onNavigateToLogin = {
+                                    backStack.remove(Screen.Register)
+                                },
+                                databaseHelper = databaseHelper
                             )
                         }
                         Screen.Home -> {

@@ -11,7 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -25,16 +24,18 @@ import androidx.compose.material.icons.filled.VisibilityOff
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(
-    onLoginSuccess: (String) -> Unit,
-    onNavigateToRegister: () -> Unit,
+fun RegisterScreen(
+    onRegisterSuccess: (String) -> Unit,
+    onNavigateToLogin: () -> Unit,
     databaseHelper: DatabaseHelper? = null
 ) {
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var mobile by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var animateStart by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val fadeAnim by animateFloatAsState(
         targetValue = if (animateStart) 1f else 0f,
@@ -79,7 +80,7 @@ fun LoginScreen(
                 fontFamily = FontFamily.SansSerif
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             // Card container for inputs to look clean and structured
             Card(
@@ -94,7 +95,7 @@ fun LoginScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "Sign In",
+                        text = "Register",
                         color = DarkSageBrown,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
@@ -110,6 +111,42 @@ fun LoginScreen(
                         label = { Text("Username", color = WarmGrey) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Terracotta,
+                            unfocusedBorderColor = WarmGrey.copy(alpha = 0.5f),
+                            focusedLabelColor = Terracotta,
+                            cursorColor = Terracotta
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { 
+                            email = it
+                            errorMessage = null
+                        },
+                        label = { Text("Email", color = WarmGrey) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Terracotta,
+                            unfocusedBorderColor = WarmGrey.copy(alpha = 0.5f),
+                            focusedLabelColor = Terracotta,
+                            cursorColor = Terracotta
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = mobile,
+                        onValueChange = {
+                            mobile = it
+                            errorMessage = null
+                        },
+                        label = { Text("Mobile", color = WarmGrey) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Terracotta,
                             unfocusedBorderColor = WarmGrey.copy(alpha = 0.5f),
@@ -165,21 +202,27 @@ fun LoginScreen(
 
                     Button(
                         onClick = {
-                            if (username.isBlank() || password.isBlank()) {
+                            if (username.isBlank() || email.isBlank() || mobile.isBlank() || password.isBlank()) {
                                 errorMessage = "Fields cannot be empty"
                                 return@Button
                             }
                             if (databaseHelper != null) {
-                                val user = databaseHelper.getUser(username)
-                                if (user == null) {
-                                    errorMessage = "User not registered"
-                                } else if (user.password != password) {
-                                    errorMessage = "Incorrect password"
-                                } else {
-                                    onLoginSuccess(username)
+                                val existingUser = databaseHelper.getUser(username)
+                                if (existingUser != null) {
+                                    errorMessage = "Username already taken"
+                                    return@Button
                                 }
+                                databaseHelper.insertUser(
+                                    com.ganesh.splashscreen.database.User(
+                                        username = username,
+                                        email = email,
+                                        password = password,
+                                        mobile = mobile
+                                    )
+                                )
+                                onRegisterSuccess(username)
                             } else {
-                                onLoginSuccess(username)
+                                onRegisterSuccess(username)
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Terracotta),
@@ -189,14 +232,12 @@ fun LoginScreen(
                             .height(50.dp)
                     ) {
                         Text(
-                            text = "Continue",
+                            text = "Register",
                             color = androidx.compose.ui.graphics.Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -204,18 +245,18 @@ fun LoginScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Not yet registered? ",
+                            text = "Already have an account? ",
                             color = WarmGrey,
                             fontSize = 14.sp,
                             fontFamily = FontFamily.SansSerif
                         )
                         Text(
-                            text = "Register",
+                            text = "Login",
                             color = Terracotta,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.SansSerif,
-                            modifier = Modifier.clickable { onNavigateToRegister() }
+                            modifier = Modifier.clickable { onNavigateToLogin() }
                         )
                     }
                 }

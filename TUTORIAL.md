@@ -284,7 +284,166 @@ Row(
 
 ---
 
-## 5. Exercises for Students 🧠
+## 5. Local Database with SQLDelight 🗄️
+
+In modern mobile development, storing user credentials or app states locally is crucial. In Kotlin Multiplatform (KMP), we use **SQLDelight** rather than Android-specific libraries like Room.
+
+### Why SQLDelight?
+* **SQL-First Approach**: Instead of writing Kotlin classes and letting an ORM generate SQL, you write raw SQL code, and SQLDelight generates type-safe Kotlin APIs from it.
+* **Multiplatform Support**: It runs on Android, iOS, Desktop, and Web using native database engines under the hood (e.g., SQLite via native API on iOS, and Android SQLite on Android).
+
+---
+
+### Step 1: Declare Version Catalog Settings
+Add the following to `gradle/libs.versions.toml`:
+```toml
+[versions]
+sqldelight = "2.0.2"
+
+[libraries]
+sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+sqldelight-coroutines-extensions = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+
+[plugins]
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+```
+
+---
+
+### Step 2: Configure `shared/build.gradle.kts`
+Apply the plugin and add dependencies for each source set target:
+```kotlin
+plugins {
+    alias(libs.plugins.sqldelight)
+}
+
+kotlin {
+    sourceSets {
+        androidMain.dependencies {
+            implementation(libs.sqldelight.android.driver)
+        }
+        iosMain.dependencies {
+            implementation(libs.sqldelight.native.driver)
+        }
+        commonMain.dependencies {
+            implementation(libs.sqldelight.runtime)
+            implementation(libs.sqldelight.coroutines.extensions)
+        }
+    }
+}
+
+sqldelight {
+    databases {
+        create("AppDatabase") {
+            packageName.set("com.ganesh.splashscreen.database")
+        }
+    }
+}
+```
+
+---
+
+### Step 3: Define the Database Schema (`.sq` File)
+Create a file at `shared/src/commonMain/sqldelight/com/ganesh/splashscreen/database/AppDatabase.sq`:
+```sql
+CREATE TABLE User (
+    username TEXT NOT NULL PRIMARY KEY,
+    email TEXT NOT NULL,
+    password TEXT NOT NULL
+);
+
+insertUser:
+INSERT OR REPLACE INTO User(username, email, password)
+VALUES (?, ?, ?);
+
+getUser:
+SELECT * FROM User
+WHERE username = ? LIMIT 1;
+```
+*Note: SQLDelight processes this SQL file and automatically generates type-safe query APIs like `appDatabaseQueries.insertUser(...)`.*
+
+---
+
+### Step 4: Multiplatform SQLite Drivers (`expect`/`actual`)
+Since database drivers require platform-specific drivers (Android needs a `Context`, iOS does not), we use KMP's `expect`/`actual` mechanism.
+
+1. **Common Declaration** (`shared/src/commonMain/kotlin/.../DatabaseDriverFactory.kt`):
+```kotlin
+expect class DatabaseDriverFactory() {
+    fun createDriver(): SqlDriver
+}
+```
+
+2. **iOS Implementation** (`shared/src/iosMain/kotlin/.../DatabaseDriverFactory.ios.kt`):
+```kotlin
+actual class DatabaseDriverFactory {
+    actual fun createDriver(): SqlDriver {
+        return NativeSqliteDriver(AppDatabase.Schema, "AppDatabase.db")
+    }
+}
+```
+
+3. **Android Context Passing** (`shared/src/androidMain/kotlin/.../DatabaseDriverFactory.android.kt`):
+On Android, the driver requires application context. To pass context cleanly without polluting `commonMain` code, we set up a static `AppContextHolder` singleton:
+```kotlin
+// AppContextHolder.kt in androidMain
+object AppContextHolder {
+    lateinit var context: Context
+}
+
+// DatabaseDriverFactory.android.kt in androidMain
+actual class DatabaseDriverFactory {
+    actual fun createDriver(): SqlDriver {
+        return AndroidSqliteDriver(AppDatabase.Schema, AppContextHolder.context, "AppDatabase.db")
+    }
+}
+```
+*Initialize `AppContextHolder.context = applicationContext` in your Android `MainActivity.onCreate()` block before running `setContent`.*
+
+---
+
+### Step 5: Create a Database Helper
+Wrap the SQLDelight queries in a unified helper helper in `commonMain`:
+```kotlin
+class DatabaseHelper(driver: SqlDriver) {
+    private val database = AppDatabase(driver)
+    private val dbQueries = database.appDatabaseQueries
+
+    fun insertUser(user: User) {
+        dbQueries.insertUser(user.username, user.email, user.password)
+    }
+
+    fun getUser(username: String): User? {
+        return dbQueries.getUser(username).executeAsOneOrNull()
+    }
+}
+```
+
+---
+
+### Step 6: Safe Initialization & UI Integration
+In Compose previews, the application context or platform database drivers are unavailable. To prevent preview crashes, verify you are not in inspection mode:
+```kotlin
+val isPreview = LocalInspectionMode.current
+val databaseHelper = remember {
+    if (isPreview) {
+        null
+    } else {
+        try {
+            DatabaseHelper(DatabaseDriverFactory().createDriver())
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
+```
+Pass this `databaseHelper` into the screens, validate typed text inputs on login, and query database entries.
+
+---
+
+## 6. Exercises for Students 🧠
 
 Test your learning by attempting these code challenges:
 
@@ -297,3 +456,9 @@ Modify `SplashScreen.kt` to draw an animating circular loading indicator or a do
 
 ### Exercise 3: Add Dark Mode Support
 Modify `Theme.kt` and `styles.xml` to support standard Android Dark Mode. Setup a dark scheme background `#1E1B18` and test how the colors switch when system dark mode is enabled.
+
+### Exercise 4: Add User deletion/cleanup to Database
+Implement user removal functionality.
+* Add a `deleteUser` query in `AppDatabase.sq`.
+* Implement a `deleteUser(username: String)` helper method in `DatabaseHelper`.
+* Add a button on the `HomeScreen` to delete/unregister the currently logged-in account, verifying it deletes the database record and logs the user out.

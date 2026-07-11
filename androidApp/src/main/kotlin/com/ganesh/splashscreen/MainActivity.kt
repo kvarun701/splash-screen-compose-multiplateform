@@ -16,6 +16,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        AppContextHolder.context = applicationContext
         val storage = KeyValueStorageFactory(applicationContext).create("app_preferences")
 
         setContent {
