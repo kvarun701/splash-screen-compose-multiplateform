@@ -83,6 +83,7 @@ fun App(storage: KeyValueStorage = remember { InMemoryKeyValueStorage() }) {
                         Screen.Home -> {
                             HomeScreen(
                                 storage = storage,
+                                databaseHelper = databaseHelper,
                                 onLogout = {
                                     storage.clear()
                                     backStack.clear()

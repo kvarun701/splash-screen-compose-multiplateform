@@ -12,6 +12,10 @@ class DatabaseHelper(driver: SqlDriver) {
         dbQueries.insertUser(user.username, user.email, user.password, user.mobile)
     }
 
+    fun getAllUsers(): List<User> {
+        return dbQueries.getAllUsers().executeAsList()
+    }
+
     fun getUser(username: String): User? {
         return dbQueries.getUser(username).executeAsOneOrNull()
     }

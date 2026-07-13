@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS User_new (
+    username TEXT NOT NULL PRIMARY KEY,
+    email TEXT NOT NULL,
+    password TEXT NOT NULL,
+    mobile TEXT NOT NULL DEFAULT ''
+);
+
+INSERT OR IGNORE INTO User_new (username, email, password, mobile)
+SELECT username, email, password, '' FROM User;
+
+DROP TABLE IF EXISTS User;
+ALTER TABLE User_new RENAME TO User;
+

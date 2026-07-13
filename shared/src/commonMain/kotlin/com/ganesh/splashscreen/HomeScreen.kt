@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -33,16 +34,32 @@ import com.ganesh.composepref.KeyValueStorage
 import com.ganesh.composepref.InMemoryKeyValueStorage
 import splashscreen.shared.generated.resources.Res
 import splashscreen.shared.generated.resources.landscape_bg
+import com.ganesh.splashscreen.database.User
 
 
 @Composable
 @Preview(showBackground = true)
 fun HomeScreen(
     storage: KeyValueStorage = remember { InMemoryKeyValueStorage() },
+    databaseHelper: DatabaseHelper? = null,
     onLogout: () -> Unit = {}
 ) {
     val username = remember { storage.getString("username", defaultValue = "Eco Explorer") ?: "Eco Explorer" }
     val displayName = if (username.isBlank()) "Eco Explorer" else username
+    val users = remember { mutableStateOf<List<User>>(emptyList()) }
+    var showDeleteConfirm by remember { mutableStateOf<String?>(null) }
+
+    fun loadUsers() {
+        users.value = databaseHelper?.getAllUsers() ?: emptyList()
+    }
+
+    LaunchedEffect(databaseHelper) {
+        loadUsers()
+    }
+
+    LaunchedEffect(showDeleteConfirm) {
+        if (showDeleteConfirm == null) loadUsers()
+    }
     TerraTheme {
         Box(
             modifier = Modifier
@@ -62,7 +79,26 @@ fun HomeScreen(
                     HeaderSection(username = displayName, onLogoutClick = onLogout)
                 }
 
-                // 2. Hero Card Section
+                // 2. Registered Users Section
+                if (users.value.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Registered Users",
+                            color = DarkSageBrown,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Serif
+                        )
+                    }
+                    items(users.value) { user ->
+                        UserCard(
+                            user = user,
+                            onDelete = { showDeleteConfirm = user.username }
+                        )
+                    }
+                }
+
+                // 3. Hero Card Section
                 item {
                     HeroCard()
                 }
@@ -109,6 +145,66 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                 }
+            }
+
+            showDeleteConfirm?.let { username ->
+                AlertDialog(
+                    onDismissRequest = { showDeleteConfirm = null },
+                    title = { Text("Delete User") },
+                    text = { Text("Are you sure you want to delete \"$username\"?") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            databaseHelper?.deleteUserByUsername(username)
+                            showDeleteConfirm = null
+                        }) {
+                            Text("Delete", color = Terracotta)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteConfirm = null }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun UserCard(user: User, onDelete: () -> Unit) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = SoftBeige.copy(alpha = 0.5f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = user.username,
+                    color = DarkSageBrown,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                Text(
+                    text = user.email,
+                    color = WarmGrey,
+                    fontSize = 13.sp
+                )
+            }
+            IconButton(onClick = onDelete) {
+                Text(
+                    text = "✕",
+                    color = Terracotta,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
