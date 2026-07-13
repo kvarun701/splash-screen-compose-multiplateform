@@ -715,18 +715,46 @@ Create a file at `shared/src/commonMain/sqldelight/com/ganesh/splashscreen/datab
 CREATE TABLE User (
     username TEXT NOT NULL PRIMARY KEY,
     email TEXT NOT NULL,
-    password TEXT NOT NULL
+    password TEXT NOT NULL,
+    mobile TEXT NOT NULL
 );
 
 insertUser:
-INSERT OR REPLACE INTO User(username, email, password)
-VALUES (?, ?, ?);
+INSERT OR REPLACE INTO User(username, email, password, mobile)
+VALUES (?, ?, ?, ?);
 
 getUser:
 SELECT * FROM User
 WHERE username = ? LIMIT 1;
+
+getAllUsers:
+SELECT * FROM User;
+
+deleteUserByUsername:
+DELETE FROM User
+WHERE username = ?;
 ```
 *Note: SQLDelight processes this SQL file and automatically generates type-safe query APIs like `appDatabaseQueries.insertUser(...)`.*
+
+When modifying an existing schema, create a migration file in `shared/src/commonMain/sqldelight/migrations/N.sqm` (where N is the version number). For example, to add the `mobile` column to an existing database:
+
+```sql
+-- migrations/1.sqm
+CREATE TABLE IF NOT EXISTS User_new (
+    username TEXT NOT NULL PRIMARY KEY,
+    email TEXT NOT NULL,
+    password TEXT NOT NULL,
+    mobile TEXT NOT NULL DEFAULT ''
+);
+
+INSERT OR IGNORE INTO User_new (username, email, password, mobile)
+SELECT username, email, password, '' FROM User;
+
+DROP TABLE IF EXISTS User;
+ALTER TABLE User_new RENAME TO User;
+```
+
+SQLDelight generates schema code with version tracking and runs migrations automatically via `NativeSqliteDriver` / `AndroidSqliteDriver`.
 
 ---
 
@@ -739,6 +767,8 @@ expect class DatabaseDriverFactory() {
     fun createDriver(): SqlDriver
 }
 ```
+
+> **iOS Build Note**: Since the Kotlin/Native framework is static, you must link the system SQLite library. In Xcode, add `-lsqlite3` to `OTHER_LDFLAGS` under Build Settings (both Debug and Release).
 
 2. **iOS Implementation** (`shared/src/iosMain/kotlin/.../DatabaseDriverFactory.ios.kt`):
 ```kotlin
@@ -776,11 +806,19 @@ class DatabaseHelper(driver: SqlDriver) {
     private val dbQueries = database.appDatabaseQueries
 
     fun insertUser(user: User) {
-        dbQueries.insertUser(user.username, user.email, user.password)
+        dbQueries.insertUser(user.username, user.email, user.password, user.mobile)
+    }
+
+    fun getAllUsers(): List<User> {
+        return dbQueries.getAllUsers().executeAsList()
     }
 
     fun getUser(username: String): User? {
         return dbQueries.getUser(username).executeAsOneOrNull()
+    }
+
+    fun deleteUserByUsername(username: String) {
+        dbQueries.deleteUserByUsername(username)
     }
 }
 ```
@@ -826,3 +864,5 @@ Implement user removal functionality.
 * Add a `deleteUser` query in `AppDatabase.sq`.
 * Implement a `deleteUser(username: String)` helper method in `DatabaseHelper`.
 * Add a button on the `HomeScreen` to delete/unregister the currently logged-in account, verifying it deletes the database record and logs the user out.
+
+> ✅ **Done!** This project implements all of the above — see `AppDatabase.sq` for `deleteUserByUsername`, `DatabaseHelper.deleteUserByUsername()`, and the user list with delete on `HomeScreen`.
